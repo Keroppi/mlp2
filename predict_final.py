@@ -1,12 +1,13 @@
 import sys
 
 # Whether or not this code will run on the cluster.
-cluster_run = False
+cluster_run = True
+cluster_username = 'vli'
 
 # This is to point to local packages on Euler cluster.
 if cluster_run:
-    sys.path.insert(1, '/cluster/home/vli/.local/lib64/python2.7/site-packages/sklearn')
-    sys.path.insert(1, '/cluster/home/vli/.local/lib64/python2.7/site-packages/')
+    sys.path.insert(1, '/cluster/home/' + cluster_username + '/.local/lib64/python2.7/site-packages/sklearn')
+    sys.path.insert(1, '/cluster/home/' + cluster_username + '/.local/lib64/python2.7/site-packages/')
 
 import numpy as np
 import os
@@ -43,18 +44,18 @@ x_crop = 5
 y_crop = 5
 z_crop = 5
 crop_size_str = "_" + str(x_crop) + "_" + str(y_crop) + "_" + str(z_crop) # for name of directory to save to
-train_filenames, test_filenames = crop.crop_images(train_filenames, test_filenames, x_crop, y_crop, z_crop, cluster_run)
+train_filenames, test_filenames = crop.crop_images(train_filenames, test_filenames, x_crop, y_crop, z_crop, cluster_run, cluster_username)
 
 # TO DO: Break up images into 3x3x3 (or some other size) grids.
 
 ### FEATURES ###
 
 # Fourier (with PCA and ANOVA)
-fourier_train_feat, fourier_test_feat = fourier.fourier(train_filenames, test_filenames, y, crop_size_str, pca_dim=10, k_best=10, cluster_run=cluster_run)
+fourier_train_feat, fourier_test_feat = fourier.fourier(train_filenames, test_filenames, y, crop_size_str, pca_dim=10, k_best=10, cluster_run=cluster_run, cluster_username=cluster_username)
 
 # Histogram (with ANOVA)
 num_bins = 45
-hist_train_feat, hist_test_feat = hist.histogram(num_bins, train_filenames, test_filenames, y, crop_size_str, k_best=10, cluster_run=cluster_run)
+hist_train_feat, hist_test_feat = hist.histogram(num_bins, train_filenames, test_filenames, y, crop_size_str, k_best=10, cluster_run=cluster_run, cluster_username=cluster_username)
 
 # Canny filter?
 # Watershed?

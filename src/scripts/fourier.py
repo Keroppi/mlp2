@@ -10,12 +10,12 @@ from sklearn.feature_selection import SelectKBest
 from sklearn.pipeline import FeatureUnion
 import sys
 
-def fourier(train_filenames, test_filenames, y, crop_size_str, pca_dim, k_best, cluster_run):
+def fourier(train_filenames, test_filenames, y, crop_size_str, pca_dim, k_best, cluster_run, cluster_username='vli'):
     # Train features
     train_feature_vectors = []
 
     if cluster_run:
-        save_path = "/cluster/scratch/vli/src/train_features/fourier" + crop_size_str + "/"
+        save_path = "/cluster/scratch/" + cluster_username + "/src/train_features/fourier" + crop_size_str + "/"
     else:
         save_path = "./src/train_features/fourier" + crop_size_str + "/"
     if not os.path.exists(save_path):
@@ -51,7 +51,7 @@ def fourier(train_filenames, test_filenames, y, crop_size_str, pca_dim, k_best, 
     test_feature_vectors = []
 
     if cluster_run:
-        save_path = "/cluster/scratch/vli/src/test_features/fourier" + crop_size_str + "/"
+        save_path = "/cluster/scratch/" + cluster_username + "/src/test_features/fourier" + crop_size_str + "/"
     else:
         save_path = "./src/test_features/fourier" + crop_size_str + "/"
 

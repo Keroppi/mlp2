@@ -13,12 +13,12 @@ from sklearn.feature_selection import SelectKBest
 # Every function returns a tuple (train_feature_vectors, test_feature_vectors)
 # Tries to load from disk if possible, otherwise it saves them to disk.
 
-def histogram(num_of_bins, train_filenames, test_filenames, y, crop_size_str, k_best, cluster_run):
+def histogram(num_of_bins, train_filenames, test_filenames, y, crop_size_str, k_best, cluster_run, cluster_username='vli'):
     # Train features
     train_feature_vectors = []
 
     if cluster_run:
-        save_path = "/cluster/scratch/vli/src/train_features/histogram" + crop_size_str + "_" + str(num_of_bins) + "bin/"
+        save_path = "/cluster/scratch/" + cluster_username + "/src/train_features/histogram" + crop_size_str + "_" + str(num_of_bins) + "bin/"
     else:
         save_path = "./src/train_features/histogram" + crop_size_str + "_" + str(num_of_bins) + "bin/"
 
@@ -51,7 +51,7 @@ def histogram(num_of_bins, train_filenames, test_filenames, y, crop_size_str, k_
     test_feature_vectors = []
 
     if cluster_run:
-        save_path = "/cluster/scratch/vli/src/test_features/histogram" + crop_size_str + "_" + str(num_of_bins) + "bin/"
+        save_path = "/cluster/scratch/" + cluster_username + "/src/test_features/histogram" + crop_size_str + "_" + str(num_of_bins) + "bin/"
     else:
         save_path = "./src/test_features/histogram" + crop_size_str + "_" + str(num_of_bins) + "bin/"
 

@@ -20,10 +20,10 @@ X_MAX = 159
 # and                  ./src/cropped_data/set_test_<x_diff>_<y_diff>_<z_diff>/test_<i>.npy
 # Returns paths to train files and test files.
 
-def crop_images(train_filenames, test_filenames, x_diff, y_diff, z_diff, cluster_run):
+def crop_images(train_filenames, test_filenames, x_diff, y_diff, z_diff, cluster_run, cluster_username='vli'):
     # Crop train images.
     if cluster_run:
-        train_save_path = "/cluster/scratch/vli/src/cropped_data/set_train_" + str(x_diff) + "_" + str(y_diff) + "_" + str(z_diff) + "/"
+        train_save_path = "/cluster/scratch/" + cluster_username + "/src/cropped_data/set_train_" + str(x_diff) + "_" + str(y_diff) + "_" + str(z_diff) + "/"
     else:
         train_save_path = "./src/cropped_data/set_train_" + str(x_diff) + "_" + str(y_diff) + "_" + str(z_diff) + "/"
 
@@ -47,9 +47,9 @@ def crop_images(train_filenames, test_filenames, x_diff, y_diff, z_diff, cluster
 
     # Crop test images.
     if cluster_run:
-        test_save_path = "/cluster/scratch/vli/src/cropped_data/set_test_" + str(x_diff) + "_" + str(y_diff) + "_" + str(z_diff) + "/"
+        test_save_path = "/cluster/scratch/" + cluster_username + "/src/cropped_data/set_test_" + str(x_diff) + "_" + str(y_diff) + "_" + str(z_diff) + "/"
     else:
-        test_save_path = "./src/cropped_data/set_test_" + str(x_diff) + "_" + str(y_diff) + "_" + str(z_diff) + "/"  # "/cluster/scratch/vli/data/sliced/set_train_" + str(x_diff) + "_" + str(y_diff) + "_" + str(z_diff) + "/"
+        test_save_path = "./src/cropped_data/set_test_" + str(x_diff) + "_" + str(y_diff) + "_" + str(z_diff) + "/"
 
     if not os.path.exists(test_save_path):
         os.makedirs(test_save_path)
