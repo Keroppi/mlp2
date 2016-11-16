@@ -19,6 +19,7 @@ import src.scripts.svm as svm
 import src.scripts.neural_net as nn
 import src.scripts.crop as crop
 import src.scripts.histogram as hist
+import src.scripts.average as avg
 
 if cluster_run:
     import warnings
@@ -32,7 +33,7 @@ train_filenames = ["./data/set_train/train_" + str(i) + ".nii" for i in range(1,
 test_filenames = ["./data/set_test/test_" + str(i) + ".nii" for i in range(1, NUM_TEST_DATA + 1)]
 y = targets.get_targets()
 
-#y = y[:NUM_TRAIN_DATA] # ONLY FOR TESTING SMALLER SETS
+#y = y[:NUM_TRAIN_DATA] # ONLY FOR DEBUGGING WITH SMALLER SETS
 
 # Crop the images.
 x_crop = 5
@@ -44,22 +45,33 @@ train_filenames, test_filenames = crop.crop_images(train_filenames, test_filenam
 # TO DO: Break up images into 3x3x3 (or some other size) grids.
 
 # Features
-#fourier_train_feat, fourier_test_feat = fourier.fourier(train_filenames, test_filenames, y, crop_size_str, pca_dim=10, k_best=10, cluster_run=cluster_run)
+fourier_train_feat, fourier_test_feat = fourier.fourier(train_filenames, test_filenames, y, crop_size_str, pca_dim=10, k_best=10, cluster_run=cluster_run)
 
 num_bins = 45
 hist_train_feat, hist_test_feat = hist.histogram(num_bins, train_filenames, test_filenames, y, crop_size_str, k_best=10, cluster_run=cluster_run)
+
 # Canny filter?
 # Watershed?
 # Template matching
 
 # Find hyperparameters for various models.
-#f_svm_cross_val_error = svm.find_params(fourier_train_feat, y, fourier_test_feat, 'fourier')
-#f_nn_cross_val_error = nn.find_params(fourier_train_feat, y, fourier_test_feat, 'fourier')
+errors = []           # store the cross-validation errors (needed for averaging)
+prediction_files = [] # store the paths to the prediction files (needed for averaging)
 
-h_svm_cross_val_error = svm.find_params(hist_train_feat, y, hist_test_feat, 'hist')
-h_nn_cross_val_error = nn.find_params(hist_train_feat, y, hist_test_feat, 'hist')
+f_svm_cross_val_error, f_svm_stddev = svm.find_params(fourier_train_feat, y, fourier_test_feat, 'fourier')
+errors.append(f_svm_cross_val_error + f_svm_stddev) # weight according to error + stddev to punish high stddev
+prediction_files.append('./src/predictions/fourier_svm_pred.csv')
+
+h_svm_cross_val_error, h_svm_stddev = svm.find_params(hist_train_feat, y, hist_test_feat, 'hist')
+errors.append(h_svm_cross_val_error + h_svm_stddev)
+prediction_files.append('./src/predictions/hist_svm_pred.csv')
+
+# seems like neural nets are not good - extremely high error
+# f_nn_cross_val_error, f_nn_stddev = nn.find_params(fourier_train_feat, y, fourier_test_feat, 'fourier')
+# h_nn_cross_val_error, h_nn_stddev = nn.find_params(hist_train_feat, y, hist_test_feat, 'hist')
 
 # ElasticNet Regression? SpaceNetClassifier?
 # Searchlight? http://nilearn.github.io/auto_examples/02_decoding/plot_haxby_searchlight.html#sphx-glr-auto-examples-02-decoding-plot-haxby-searchlight-py
 
-# TO DO: Average predictions according to cross-validation error.
+# Average predictions according to cross-validation error.
+avg.average_predictions(errors, prediction_files, num_test_examples=NUM_TEST_DATA)

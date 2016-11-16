@@ -93,7 +93,7 @@ def find_params(X, y, X_test, feature_name):
         for i in range(1, len(y_test) + 1):
             out.write(str(i) + "," + str(y_test[i - 1]) + "\n")
 
-    # Return cross-validation error for weighting later.
-    return -means[one_standard_idx]
+    # Return cross-validation error, stddev for weighting later.
+    return (-means[one_standard_idx], stds[one_standard_idx])
 
 
