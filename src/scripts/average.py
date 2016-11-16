@@ -26,3 +26,9 @@ def average_predictions(cross_val_errors, filenames, num_test_examples=138):
         out.write("ID,Prediction\n")
         for i in range(1, num_test_examples + 1):
             out.write(str(i) + "," + str(average[i - 1]) + "\n")
+
+            # Sanity check.
+            if average[i - 1] <= 0 or average[i - 1] >= 1:
+                print("ERROR: PREDICTED AN INVALID CLASS")
+                out.write("ERROR: PREDICTED AN INVALID CLASS" + "\n")
+                break
