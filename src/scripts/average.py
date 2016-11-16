@@ -22,7 +22,7 @@ def average_predictions(cross_val_errors, filenames, num_test_examples=138):
                 average[i] = average[i] + weights[w_idx] * float(status)
 
 
-    with open('./final_submission.csv', 'w') as out:
+    with open('./final_sub.csv', 'w') as out:
         out.write("ID,Prediction\n")
         for i in range(1, num_test_examples + 1):
             out.write(str(i) + "," + str(average[i - 1]) + "\n")
