@@ -1,28 +1,23 @@
-import numpy as np
-import os
-import pickle
-from sklearn.svm import SVC
-from sklearn.model_selection import GridSearchCV
 import sys
+import numpy as np
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import GridSearchCV
+import pickle
+import os
 from sklearn.model_selection import cross_val_score
 
-# Returns the mean cross-val error of the estimator using "one-standard" rule.
-# Stores the pickled estimator in ../estimators/<feature_name>_svm.pkl.
-# Stores its predictions in ../predictions/<feature_name>_svm_pred.csv.
 def find_params(X, y, X_test, feature_name):
     # Parameters to try.
-    penalties = [0.01, 0.1, 1.0, 10]
-    kernels = ['linear', 'poly', 'rbf', 'sigmoid']
-    tol = [0.01, 0.1, 1.0]
+    param_grid = {"penalty": ["l2"],
+                  "C": [0.01, 0.1, 0.5, 1, 5],
+                  "max_iter": [250],
+                  "solver": ['lbfgs'],
+                  "tol": [0.001, 0.01, 0.1, 1, 5]
+                 }
 
-    param_grid = {"probability": [True],
-                  "C": penalties,
-                  "kernel": kernels,
-                  "tol": tol}
+    lreg = LogisticRegression()
 
-    # Try all combinations of parameters.
-    svc = SVC()
-    grid_search = GridSearchCV(svc, param_grid=param_grid, cv=10, scoring='neg_log_loss', verbose=2, n_jobs=-1)
+    grid_search = GridSearchCV(lreg, param_grid=param_grid, cv=10, scoring='neg_log_loss', verbose=2, n_jobs=-1)
     grid_search.fit(X, y)
 
     means = grid_search.cv_results_['mean_test_score']
@@ -33,7 +28,8 @@ def find_params(X, y, X_test, feature_name):
     best_score = -grid_search.best_score_
 
     # Print the absolute best error for reference.
-    print("Absolute best SVM Score: " + str(best_score))
+    print("")
+    print("Absolute best LogRegr Score: " + str(best_score))
     print("Std Dev of best scoring estimator: " + str(stds[best_idx]))
     print("Params of best scoring estimator: " + str(parameters[best_idx]))
     print("")
@@ -43,7 +39,7 @@ def find_params(X, y, X_test, feature_name):
 
     # Use the one-standard rule.
     for counter in range(len(means)):
-        if (best_score + stds[counter] > -means[counter] ) and stds[counter] < lowest_std:
+        if (best_score + stds[counter] > -means[counter]) and stds[counter] < lowest_std:
             lowest_std = stds[counter]
             one_standard_idx = counter
 
@@ -54,21 +50,22 @@ def find_params(X, y, X_test, feature_name):
         one_standard_idx = best_idx
 
     # Print the error and stddev of the one-standard rule estimator.
-    print("One Standard SVM Score: " + str(-means[one_standard_idx]))
+    print("One Standard LogRegr Score: " + str(-means[one_standard_idx]))
     print("Std Dev of 1-std estimator: " + str(stds[one_standard_idx]))
     print("Params of 1-std estimator: " + str(parameters[one_standard_idx]))
+    print("")
 
     # Mainly for running on cluster.
     sys.stdout.flush()
 
     # Retrain using one-standard parameters.
-    one_standard = SVC(**parameters[one_standard_idx])
+    one_standard = LogisticRegression(**parameters[one_standard_idx])
     one_standard.fit(X, y)
 
     # Check cross-validation score again, since we had to retrain.
     # It may vary a lot if the algorithm is stochastic.
     scores = cross_val_score(one_standard, X, y, scoring='neg_log_loss', cv=10, n_jobs=-1)
-    print("Refitted SVM score: " + str(-scores.mean()))
+    print("Refitted LogRegr score: " + str(-scores.mean()))
     print("Refitted stddev: " + str(scores.std()))
     print("")
 
@@ -80,7 +77,7 @@ def find_params(X, y, X_test, feature_name):
     if not os.path.exists(est_save_path):
         os.makedirs(est_save_path)
 
-    pickle.dump(one_standard, open(est_save_path + feature_name + '_svm.pkl', 'wb'))
+    pickle.dump(one_standard, open(est_save_path + feature_name + '_logreg.pkl', 'wb'))
 
     # Output predictions as a probability.
     pred_save_path = "./src/predictions/"
@@ -89,6 +86,7 @@ def find_params(X, y, X_test, feature_name):
 
     y_test_prob = one_standard.predict_proba(X_test)
 
+    # Output is the probability of being in class 1.
     if (str(one_standard.classes_[1]) == "1"):
         class_idx = 1
     else:
@@ -99,12 +97,10 @@ def find_params(X, y, X_test, feature_name):
     for idx in range(len(y_test_prob)):
         y_test[idx] = y_test_prob[idx][class_idx]
 
-    with open(pred_save_path + feature_name + '_svm_pred.csv', 'w') as out:
+    with open(pred_save_path + feature_name + '_logreg_pred.csv', 'w') as out:
         out.write("ID,Prediction\n")
         for i in range(1, len(y_test) + 1):
             out.write(str(i) + "," + str(y_test[i - 1]) + "\n")
 
     # Return cross-validation error, stddev for weighting later.
     return (-means[one_standard_idx], stds[one_standard_idx])
-
-

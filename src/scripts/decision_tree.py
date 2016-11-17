@@ -63,7 +63,7 @@ def find_params(X, y, X_test, feature_name):
 
     # Check cross-validation score again, since we had to retrain.
     # It may vary a lot if the algorithm is stochastic.
-    scores = cross_val_score(dt, X, y, scoring='neg_log_loss', cv=10, n_jobs=-1)
+    scores = cross_val_score(one_standard, X, y, scoring='neg_log_loss', cv=10, n_jobs=-1)
     print("Refitted DecisionTree score: " + str(-scores.mean()))
     print("Refitted stddev: " + str(scores.std()))
     print("")

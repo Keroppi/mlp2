@@ -24,6 +24,7 @@ import src.scripts.crop as crop
 import src.scripts.histogram as hist
 import src.scripts.average as avg
 import src.scripts.canny as canny
+import src.scripts.logistic_regr as logreg
 
 if cluster_run:
     import warnings
@@ -52,16 +53,16 @@ train_filenames, test_filenames = crop.crop_images(train_filenames, test_filenam
 # TO DO: Break up images into 3x3x3 (or some other size) grids.
 
 ### FEATURES ###
-'''
+
 # Fourier (with PCA and ANOVA)
 fourier_train_feat, fourier_test_feat = fourier.fourier(train_filenames, test_filenames, y, crop_size_str, pca_dim=10, k_best=10, cluster_run=cluster_run, cluster_username=cluster_username)
 
 # Histogram (with ANOVA)
 num_bins = 45
 hist_train_feat, hist_test_feat = hist.histogram(num_bins, train_filenames, test_filenames, y, crop_size_str, k_best=10, cluster_run=cluster_run, cluster_username=cluster_username)
-'''
-# Canny filter (with ANOVA)
-canny_train_feat, canny_test_feat = canny.canny_filter(train_filenames, test_filenames, y, crop_size_str, k_best=10, cluster_run=cluster_run, cluster_username=cluster_username)
+
+# Canny filter (with LSA)
+canny_train_feat, canny_test_feat = canny.canny_filter(train_filenames, test_filenames, y, crop_size_str, cluster_run=cluster_run, cluster_username=cluster_username, n_dim=300, slices=3)
 
 # Watershed?
 # Template matching?
@@ -71,7 +72,7 @@ errors = []           # store the cross-validation errors (needed for averaging)
 prediction_files = [] # store the paths to the prediction files (needed for averaging)
 
 ### SVM ###
-'''
+
 # SVM with fourier features
 f_svm_cross_val_error, f_svm_stddev = svm.find_params(fourier_train_feat, y, fourier_test_feat, 'fourier')
 errors.append(f_svm_cross_val_error + f_svm_stddev) # weight according to error + stddev to punish high stddev
@@ -81,13 +82,31 @@ prediction_files.append('./src/predictions/fourier_svm_pred.csv')
 h_svm_cross_val_error, h_svm_stddev = svm.find_params(hist_train_feat, y, hist_test_feat, 'hist')
 errors.append(h_svm_cross_val_error + h_svm_stddev)
 prediction_files.append('./src/predictions/hist_svm_pred.csv')
-'''
+
 # SVM with canny filter features
 c_svm_cross_val_error, c_svm_stddev = svm.find_params(canny_train_feat, y, canny_test_feat, 'canny')
 errors.append(c_svm_cross_val_error + c_svm_stddev)
 prediction_files.append('./src/predictions/canny_svm_pred.csv')
 
+### Logistic Regression ###
+
+# with fourier features
+f_logreg_cross_val_error, f_logreg_stddev = logreg.find_params(fourier_train_feat, y, fourier_test_feat, 'fourier')
+errors.append(f_logreg_cross_val_error + f_logreg_stddev)
+prediction_files.append('./src/predictions/fourier_logreg_pred.csv')
+
+# with histogram features
+h_logreg_cross_val_error, h_logreg_stddev = logreg.find_params(hist_train_feat, y, hist_test_feat, 'hist')
+errors.append(h_logreg_cross_val_error + h_logreg_stddev)
+prediction_files.append('./src/predictions/hist_logreg_pred.csv')
+
+# with canny filter features
+c_logreg_cross_val_error, c_logreg_stddev = logreg.find_params(canny_train_feat, y, canny_test_feat, 'canny')
+errors.append(c_logreg_cross_val_error + c_logreg_stddev)
+prediction_files.append('./src/predictions/canny_logreg_pred.csv')
+
 ### Decision Tree Classifier ###
+# seems like decision trees are not good - high error and variance
 '''
 f_dt_cross_val_error, f_dt_stddev = dt.find_params(fourier_train_feat, y, fourier_test_feat, 'dt')
 errors.append(f_dt_cross_val_error + f_dt_stddev)
@@ -101,9 +120,13 @@ c_dt_cross_val_error, c_dt_stddev = dt.find_params(canny_train_feat, y, canny_te
 errors.append(c_dt_cross_val_error + c_dt_stddev)
 prediction_files.append('./src/predictions/canny_dt_pred.csv')
 '''
+
+### Neural Nets ###
 # seems like neural nets are not good - extremely high error
-# f_nn_cross_val_error, f_nn_stddev = nn.find_params(fourier_train_feat, y, fourier_test_feat, 'fourier')
-# h_nn_cross_val_error, h_nn_stddev = nn.find_params(hist_train_feat, y, hist_test_feat, 'hist')
+'''
+f_nn_cross_val_error, f_nn_stddev = nn.find_params(fourier_train_feat, y, fourier_test_feat, 'fourier')
+h_nn_cross_val_error, h_nn_stddev = nn.find_params(hist_train_feat, y, hist_test_feat, 'hist')
+'''
 
 # Searchlight? http://nilearn.github.io/auto_examples/02_decoding/plot_haxby_searchlight.html#sphx-glr-auto-examples-02-decoding-plot-haxby-searchlight-py
 

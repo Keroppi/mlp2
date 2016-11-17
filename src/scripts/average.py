@@ -1,4 +1,10 @@
+from math import exp
+
 def average_predictions(cross_val_errors, filenames, num_test_examples=138):
+    # Take the exponential since we're dealing with log errors.
+    for (idx, error) in enumerate(cross_val_errors):
+        cross_val_errors[idx] = exp(cross_val_errors[idx])
+
     average = [0] * num_test_examples
 
     total_error = 0

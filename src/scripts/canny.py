@@ -10,8 +10,10 @@ from sklearn.pipeline import FeatureUnion
 import sys
 from skimage import feature
 import matplotlib.pyplot as plt
+from sklearn.decomposition import TruncatedSVD
+import math
 
-def canny_filter(train_filenames, test_filenames, y, crop_size_str, k_best, cluster_run, cluster_username='vli'):
+def canny_filter(train_filenames, test_filenames, y, crop_size_str, cluster_run, cluster_username='vli', n_dim=300, slices=3):
     # Train features
     train_feature_vectors = []
 
@@ -40,13 +42,19 @@ def canny_filter(train_filenames, test_filenames, y, crop_size_str, k_best, clus
             x_size, y_size, z_size = img_array.shape
 
             # Fix X
-            x_edges = (feature.canny(img_array[x_size / 2, :, :], sigma=1.75)).astype(int)
+            x_edges = np.array([])
+            for slice_idx in range(1, slices + 1):
+                x_edges = np.append(x_edges, (feature.canny(img_array[math.floor(x_size / (slices + 1.0) * slice_idx), :, :], sigma=1.75)).astype(int))
 
             # Fix Y
-            y_edges = (feature.canny(img_array[:, y_size / 2, :], sigma=1.75)).astype(int)
+            y_edges = np.array([])
+            for slice_idx in range(1, slices + 1):
+                y_edges = np.append(y_edges, (feature.canny(img_array[:, math.floor(y_size / (slices + 1.0) * slice_idx), :], sigma=1.75)).astype(int))
 
             # Fix Z
-            z_edges = (feature.canny(img_array[:, :, z_size / 2], sigma=1.75)).astype(int)
+            z_edges = np.array([])
+            for slice_idx in range(1, slices + 1):
+                z_edges = np.append(z_edges, (feature.canny(img_array[:, :, math.floor(z_size / (slices + 1.0) * slice_idx)], sigma=1.75)).astype(int))
 
             '''
             # display results
@@ -70,7 +78,7 @@ def canny_filter(train_filenames, test_filenames, y, crop_size_str, k_best, clus
             plt.show()
             '''
 
-            canny_vector = np.concatenate((x_edges.flatten(), y_edges.flatten(), z_edges.flatten()))
+            canny_vector = np.concatenate((x_edges, y_edges, z_edges))
 
             np.save(save_path + "feature_vector_" + str(i), canny_vector)
             train_feature_vectors.append(canny_vector)
@@ -127,11 +135,11 @@ def canny_filter(train_filenames, test_filenames, y, crop_size_str, k_best, clus
     if cluster_run:
         sys.stdout.flush()
 
-    selection = SelectKBest(k=k_best)
+    lsa = TruncatedSVD(n_components=n_dim, n_iter=7)
 
     # Use combined features to transform dataset:
-    selection.fit(train_feature_vectors, y)
-    reduced_train_feature_vectors = selection.transform(train_feature_vectors)
-    reduced_test_feature_vectors = selection.transform(test_feature_vectors)
+    lsa.fit(train_feature_vectors)
+    reduced_train_feature_vectors = lsa.transform(train_feature_vectors)
+    reduced_test_feature_vectors = lsa.transform(test_feature_vectors)
 
     return (reduced_train_feature_vectors, reduced_test_feature_vectors)
