@@ -5,15 +5,15 @@ import sys
 
 # Approximate indices of where the brain starts and ends.
 # x,y,z sizes = 139x173x147 with 1 pixel black boundary
-Z_MIN = 6 # bottom of brain stem
-Z_MAX = 153
-
-Y_MIN = 17
-Y_MAX = 190 # forehead
 
 X_MIN = 20 # ear to ear
 X_MAX = 159
 
+Y_MIN = 17
+Y_MAX = 190 # forehead
+
+Z_MIN = 6 # bottom of brain stem
+Z_MAX = 153
 
 # If x_diff is 20, then we select the image from [x_min + 20, x_max - 20)
 # Saves sliced data to ./src/cropped_data/set_train_<x_diff>_<y_diff>_<z_diff>/train_<i>.npy

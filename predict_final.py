@@ -18,10 +18,11 @@ import src.scripts.get_targets as targets
 import src.scripts.fourier as fourier
 import src.scripts.svm as svm
 import src.scripts.neural_net as nn
-import src.scripts.elastic_net as regr
+import src.scripts.decision_tree as dt
 import src.scripts.crop as crop
 import src.scripts.histogram as hist
 import src.scripts.average as avg
+import src.scripts.canny as canny
 
 if cluster_run:
     import warnings
@@ -40,9 +41,10 @@ y = targets.get_targets()
 ### PREPROCESSING ###
 
 # Crop the images (automatically crops the black borders, offsets are starting from the actual brain).
-x_crop = 5
-y_crop = 5
-z_crop = 5
+
+x_crop = 1
+y_crop = 1
+z_crop = 1
 crop_size_str = "_" + str(x_crop) + "_" + str(y_crop) + "_" + str(z_crop) # for name of directory to save to
 train_filenames, test_filenames = crop.crop_images(train_filenames, test_filenames, x_crop, y_crop, z_crop, cluster_run, cluster_username)
 
@@ -57,7 +59,9 @@ fourier_train_feat, fourier_test_feat = fourier.fourier(train_filenames, test_fi
 num_bins = 45
 hist_train_feat, hist_test_feat = hist.histogram(num_bins, train_filenames, test_filenames, y, crop_size_str, k_best=10, cluster_run=cluster_run, cluster_username=cluster_username)
 
-# Canny filter?
+# Canny filter (with ANOVA)
+canny_train_feat, canny_test_feat = canny.canny_filter(train_filenames, test_filenames, y, crop_size_str, k_best=10, cluster_run=cluster_run, cluster_username=cluster_username)
+
 # Watershed?
 # Template matching?
 
@@ -77,15 +81,24 @@ h_svm_cross_val_error, h_svm_stddev = svm.find_params(hist_train_feat, y, hist_t
 errors.append(h_svm_cross_val_error + h_svm_stddev)
 prediction_files.append('./src/predictions/hist_svm_pred.csv')
 
-### ElasticNet regression ###
+# SVM with canny filter features
+c_svm_cross_val_error, c_svm_stddev = svm.find_params(canny_train_feat, y, canny_test_feat, 'canny')
+errors.append(c_svm_cross_val_error + c_svm_stddev)
+prediction_files.append('./src/predictions/canny_svm_pred.csv')
 
-f_regr_cross_val_error, f_regr_stddev = regr.find_params(fourier_train_feat, y, fourier_test_feat, 'regr')
-errors.append(f_regr_cross_val_error + f_regr_stddev)
-prediction_files.append('./src/predictions/fourier_regr_pred.csv')
+### Decision Tree Classifier ###
 
-h_regr_cross_val_error, h_regr_stddev = regr.find_params(hist_train_feat, y, hist_test_feat, 'regr')
-errors.append(h_regr_cross_val_error + h_regr_stddev)
-prediction_files.append('./src/predictions/hist_regr_pred.csv')
+f_dt_cross_val_error, f_dt_stddev = dt.find_params(fourier_train_feat, y, fourier_test_feat, 'dt')
+errors.append(f_dt_cross_val_error + f_dt_stddev)
+prediction_files.append('./src/predictions/fourier_dt_pred.csv')
+
+h_dt_cross_val_error, h_dt_stddev = dt.find_params(hist_train_feat, y, hist_test_feat, 'dt')
+errors.append(h_dt_cross_val_error + h_dt_stddev)
+prediction_files.append('./src/predictions/hist_dt_pred.csv')
+
+c_dt_cross_val_error, c_dt_stddev = dt.find_params(canny_train_feat, y, canny_test_feat, 'dt')
+errors.append(c_dt_cross_val_error + c_dt_stddev)
+prediction_files.append('./src/predictions/canny_dt_pred.csv')
 
 # seems like neural nets are not good - extremely high error
 # f_nn_cross_val_error, f_nn_stddev = nn.find_params(fourier_train_feat, y, fourier_test_feat, 'fourier')
