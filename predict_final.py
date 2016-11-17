@@ -64,6 +64,7 @@ hist_train_feat, hist_test_feat = hist.histogram(num_bins, train_filenames, test
 # Canny filter (with LSA)
 canny_train_feat, canny_test_feat = canny.canny_filter(train_filenames, test_filenames, y, crop_size_str, cluster_run=cluster_run, cluster_username=cluster_username, n_dim=300, slices=3)
 
+
 # Watershed?
 # Template matching?
 
@@ -108,15 +109,15 @@ prediction_files.append('./src/predictions/canny_logreg_pred.csv')
 ### Decision Tree Classifier ###
 # seems like decision trees are not good - high error and variance
 '''
-f_dt_cross_val_error, f_dt_stddev = dt.find_params(fourier_train_feat, y, fourier_test_feat, 'dt')
+f_dt_cross_val_error, f_dt_stddev = dt.find_params(fourier_train_feat, y, fourier_test_feat, 'fourier')
 errors.append(f_dt_cross_val_error + f_dt_stddev)
 prediction_files.append('./src/predictions/fourier_dt_pred.csv')
 
-h_dt_cross_val_error, h_dt_stddev = dt.find_params(hist_train_feat, y, hist_test_feat, 'dt')
+h_dt_cross_val_error, h_dt_stddev = dt.find_params(hist_train_feat, y, hist_test_feat, 'hist')
 errors.append(h_dt_cross_val_error + h_dt_stddev)
 prediction_files.append('./src/predictions/hist_dt_pred.csv')
 
-c_dt_cross_val_error, c_dt_stddev = dt.find_params(canny_train_feat, y, canny_test_feat, 'dt')
+c_dt_cross_val_error, c_dt_stddev = dt.find_params(canny_train_feat, y, canny_test_feat, 'canny')
 errors.append(c_dt_cross_val_error + c_dt_stddev)
 prediction_files.append('./src/predictions/canny_dt_pred.csv')
 '''
@@ -131,4 +132,4 @@ h_nn_cross_val_error, h_nn_stddev = nn.find_params(hist_train_feat, y, hist_test
 # Searchlight? http://nilearn.github.io/auto_examples/02_decoding/plot_haxby_searchlight.html#sphx-glr-auto-examples-02-decoding-plot-haxby-searchlight-py
 
 # Average predictions according to cross-validation error and stddev.
-#avg.average_predictions(errors, prediction_files, num_test_examples=NUM_TEST_DATA)
+avg.average_predictions(errors, prediction_files, num_test_examples=NUM_TEST_DATA)

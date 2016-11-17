@@ -11,18 +11,20 @@ from sklearn.model_selection import cross_val_score
 # Stores its predictions in ../predictions/<feature_name>_svm_pred.csv.
 def find_params(X, y, X_test, feature_name):
     # Parameters to try.
-    penalties = [0.01, 0.1, 1.0, 10]
-    kernels = ['linear', 'poly', 'rbf', 'sigmoid']
-    tol = [0.01, 0.1, 1.0]
+    penalties = [0.5, 1, 1.5, 1.75, 2.5, 3, 5, 7, 10, 15]
+    kernels = ['poly'] #'linear', 'rbf', 'sigmoid'
+    degrees = [2, 3, 4]
+    tol = [0.005, 0.01, 0.015, 0.02, 0.025, 0.03]
 
     param_grid = {"probability": [True],
                   "C": penalties,
+                  "degree": degrees,
                   "kernel": kernels,
                   "tol": tol}
 
     # Try all combinations of parameters.
     svc = SVC()
-    grid_search = GridSearchCV(svc, param_grid=param_grid, cv=10, scoring='neg_log_loss', verbose=2, n_jobs=-1)
+    grid_search = GridSearchCV(svc, param_grid=param_grid, cv=2, scoring='neg_log_loss', verbose=1, n_jobs=-1)
     grid_search.fit(X, y)
 
     means = grid_search.cv_results_['mean_test_score']
@@ -105,6 +107,6 @@ def find_params(X, y, X_test, feature_name):
             out.write(str(i) + "," + str(y_test[i - 1]) + "\n")
 
     # Return cross-validation error, stddev for weighting later.
-    return (-means[one_standard_idx], stds[one_standard_idx])
+    return (-scores.mean(), scores.std())
 
 

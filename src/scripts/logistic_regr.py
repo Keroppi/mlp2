@@ -8,11 +8,11 @@ from sklearn.model_selection import cross_val_score
 
 def find_params(X, y, X_test, feature_name):
     # Parameters to try.
-    param_grid = {"penalty": ["l2"],
-                  "C": [0.01, 0.1, 0.5, 1, 5],
+    param_grid = {"penalty": ['l1', 'l2'],
+                  "C": [0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2, 1.0, 2.0, 10],
                   "max_iter": [250],
-                  "solver": ['lbfgs'],
-                  "tol": [0.001, 0.01, 0.1, 1, 5]
+                  "solver": ['lbfgs', 'liblinear'],
+                  "tol": [0.001, 0.005, 0.01, 0.02, 0.03]
                  }
 
     lreg = LogisticRegression()
@@ -103,4 +103,4 @@ def find_params(X, y, X_test, feature_name):
             out.write(str(i) + "," + str(y_test[i - 1]) + "\n")
 
     # Return cross-validation error, stddev for weighting later.
-    return (-means[one_standard_idx], stds[one_standard_idx])
+    return (-scores.mean(), scores.std())
