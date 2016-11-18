@@ -1,6 +1,6 @@
 import sys
 import numpy as np
-from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GridSearchCV
 import pickle
 import os
@@ -9,12 +9,13 @@ from sklearn.model_selection import cross_val_score
 def find_params(X, y, X_test, feature_name):
     # Parameters to try.
     max_features = [None, "auto", "log2"]
-    min_split = [2, 4, 8]
+    min_split = [2**x / 100.0 for x in range (0, 7)]
 
-    param_grid = {"max_features": max_features,
+    param_grid = {"n_estimators": [15],
+                  "max_features": max_features,
                   "min_samples_split": min_split}
 
-    dt = DecisionTreeClassifier()
+    dt = RandomForestClassifier()
 
     grid_search = GridSearchCV(dt, param_grid=param_grid, cv=10, scoring='neg_log_loss', verbose=2, n_jobs=-1)
     grid_search.fit(X, y)
@@ -28,7 +29,7 @@ def find_params(X, y, X_test, feature_name):
 
     # Print the absolute best error for reference.
     print("")
-    print("Absolute best DecisionTree Score: " + str(best_score))
+    print("Absolute best RandomForest Score: " + str(best_score))
     print("Std Dev of best scoring estimator: " + str(stds[best_idx]))
     print("Params of best scoring estimator: " + str(parameters[best_idx]))
     print("")
@@ -49,7 +50,7 @@ def find_params(X, y, X_test, feature_name):
         one_standard_idx = best_idx
 
     # Print the error and stddev of the one-standard rule estimator.
-    print("One Standard DecisionTree Score: " + str(-means[one_standard_idx]))
+    print("One Standard RandomForest Score: " + str(-means[one_standard_idx]))
     print("Std Dev of 1-std estimator: " + str(stds[one_standard_idx]))
     print("Params of 1-std estimator: " + str(parameters[one_standard_idx]))
     print("")
@@ -58,13 +59,13 @@ def find_params(X, y, X_test, feature_name):
     sys.stdout.flush()
 
     # Retrain using one-standard parameters.
-    one_standard = DecisionTreeClassifier(**parameters[one_standard_idx])
+    one_standard = RandomForestClassifier(**parameters[one_standard_idx])
     one_standard.fit(X, y)
 
     # Check cross-validation score again, since we had to retrain.
     # It may vary a lot if the algorithm is stochastic.
     scores = cross_val_score(one_standard, X, y, scoring='neg_log_loss', cv=10, n_jobs=-1)
-    print("Refitted DecisionTree score: " + str(-scores.mean()))
+    print("Refitted RandomForest score: " + str(-scores.mean()))
     print("Refitted stddev: " + str(scores.std()))
     print("")
 
@@ -76,7 +77,7 @@ def find_params(X, y, X_test, feature_name):
     if not os.path.exists(est_save_path):
         os.makedirs(est_save_path)
 
-    pickle.dump(one_standard, open(est_save_path + feature_name + '_dt.pkl', 'wb'))
+    pickle.dump(one_standard, open(est_save_path + feature_name + '_rf.pkl', 'wb'))
 
     # Output predictions as a probability.
     pred_save_path = "./src/predictions/"
@@ -95,10 +96,10 @@ def find_params(X, y, X_test, feature_name):
     for idx in range(len(y_test_prob)):
         y_test[idx] = y_test_prob[idx][class_idx]
 
-    with open(pred_save_path + feature_name + '_dt_pred.csv', 'w') as out:
+    with open(pred_save_path + feature_name + '_rf_pred.csv', 'w') as out:
         out.write("ID,Prediction\n")
         for i in range(1, len(y_test) + 1):
             out.write(str(i) + "," + str(y_test[i - 1]) + "\n")
 
     # Return cross-validation error, stddev for weighting later.
-    return (-means[one_standard_idx], stds[one_standard_idx])
+    return (-scores.mean(), scores.std())

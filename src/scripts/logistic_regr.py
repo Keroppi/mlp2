@@ -9,10 +9,10 @@ from sklearn.model_selection import cross_val_score
 def find_params(X, y, X_test, feature_name):
     # Parameters to try.
     param_grid = {"penalty": ['l1', 'l2'],
-                  "C": [0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2, 1.0, 2.0, 10],
-                  "max_iter": [250],
-                  "solver": ['lbfgs', 'liblinear'],
-                  "tol": [0.001, 0.005, 0.01, 0.02, 0.03]
+                  "C": [0.001, 0.005, 0.01, 0.05] + [0.1 * x for x in range(1, 50)],
+                  "max_iter": [300],
+                  "solver": ['liblinear'],
+                  "tol": [0.001, 0.025, 0.005, 0.01, 0.02, 0.03, 0.04, 0.05]
                  }
 
     lreg = LogisticRegression()

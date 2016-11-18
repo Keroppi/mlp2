@@ -19,7 +19,7 @@ import src.scripts.get_targets as targets
 import src.scripts.fourier as fourier
 import src.scripts.svm as svm
 import src.scripts.neural_net as nn
-import src.scripts.decision_tree as dt
+import src.scripts.random_forest as rf
 import src.scripts.crop as crop
 import src.scripts.histogram as hist
 import src.scripts.average as avg
@@ -55,14 +55,14 @@ train_filenames, test_filenames = crop.crop_images(train_filenames, test_filenam
 ### FEATURES ###
 
 # Fourier (with PCA and ANOVA)
-fourier_train_feat, fourier_test_feat = fourier.fourier(train_filenames, test_filenames, y, crop_size_str, pca_dim=10, k_best=10, cluster_run=cluster_run, cluster_username=cluster_username)
+fourier_train_feat, fourier_test_feat = fourier.fourier(train_filenames, test_filenames, y, crop_size_str, pca_dim=7, k_best=7, cluster_run=cluster_run, cluster_username=cluster_username)
 
 # Histogram (with ANOVA)
-num_bins = 45
-hist_train_feat, hist_test_feat = hist.histogram(num_bins, train_filenames, test_filenames, y, crop_size_str, k_best=10, cluster_run=cluster_run, cluster_username=cluster_username)
+num_bins = 60
+hist_train_feat, hist_test_feat = hist.histogram(num_bins, train_filenames, test_filenames, y, crop_size_str, k_best=7, cluster_run=cluster_run, cluster_username=cluster_username)
 
 # Canny filter (with LSA)
-canny_train_feat, canny_test_feat = canny.canny_filter(train_filenames, test_filenames, y, crop_size_str, cluster_run=cluster_run, cluster_username=cluster_username, n_dim=300, slices=3)
+canny_train_feat, canny_test_feat = canny.canny_filter(train_filenames, test_filenames, y, crop_size_str, cluster_run=cluster_run, cluster_username=cluster_username, n_dim=400, slices=5)
 
 
 # Watershed?
@@ -106,21 +106,19 @@ c_logreg_cross_val_error, c_logreg_stddev = logreg.find_params(canny_train_feat,
 errors.append(c_logreg_cross_val_error + c_logreg_stddev)
 prediction_files.append('./src/predictions/canny_logreg_pred.csv')
 
-### Decision Tree Classifier ###
-# seems like decision trees are not good - high error and variance
-'''
-f_dt_cross_val_error, f_dt_stddev = dt.find_params(fourier_train_feat, y, fourier_test_feat, 'fourier')
+###  Random Forest Classifier ###
+
+f_dt_cross_val_error, f_dt_stddev = rf.find_params(fourier_train_feat, y, fourier_test_feat, 'fourier')
 errors.append(f_dt_cross_val_error + f_dt_stddev)
-prediction_files.append('./src/predictions/fourier_dt_pred.csv')
+prediction_files.append('./src/predictions/fourier_rf_pred.csv')
 
-h_dt_cross_val_error, h_dt_stddev = dt.find_params(hist_train_feat, y, hist_test_feat, 'hist')
+h_dt_cross_val_error, h_dt_stddev = rf.find_params(hist_train_feat, y, hist_test_feat, 'hist')
 errors.append(h_dt_cross_val_error + h_dt_stddev)
-prediction_files.append('./src/predictions/hist_dt_pred.csv')
+prediction_files.append('./src/predictions/hist_rf_pred.csv')
 
-c_dt_cross_val_error, c_dt_stddev = dt.find_params(canny_train_feat, y, canny_test_feat, 'canny')
+c_dt_cross_val_error, c_dt_stddev = rf.find_params(canny_train_feat, y, canny_test_feat, 'canny')
 errors.append(c_dt_cross_val_error + c_dt_stddev)
-prediction_files.append('./src/predictions/canny_dt_pred.csv')
-'''
+prediction_files.append('./src/predictions/canny_rf_pred.csv')
 
 ### Neural Nets ###
 # seems like neural nets are not good - extremely high error
