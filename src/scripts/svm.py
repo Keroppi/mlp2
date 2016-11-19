@@ -9,11 +9,11 @@ from sklearn.model_selection import cross_val_score
 # Returns the mean cross-val error of the estimator using "one-standard" rule.
 # Stores the pickled estimator in ../estimators/<feature_name>_svm.pkl.
 # Stores its predictions in ../predictions/<feature_name>_svm_pred.csv.
-def find_params(X, y, X_test, feature_name):
+def find_params(X, y, X_test, feature_name, grid_size):
     # Parameters to try.
     penalties = [0.2 * x for x in range(1, 50)]
-    kernels = ['poly'] #'linear', 'rbf', 'sigmoid'
-    degrees = [2, 3]
+    kernels = ['poly', 'linear', 'rbf', 'sigmoid']
+    degrees = [3]
     tol = [0.01 * x for x in range(1, 10)]
 
     param_grid = {"probability": [True],
@@ -82,7 +82,7 @@ def find_params(X, y, X_test, feature_name):
     if not os.path.exists(est_save_path):
         os.makedirs(est_save_path)
 
-    pickle.dump(one_standard, open(est_save_path + feature_name + '_svm.pkl', 'wb'))
+    pickle.dump(one_standard, open(est_save_path + feature_name + '_grid_' + str(grid_size) + '_svm.pkl', 'wb'))
 
     # Output predictions as a probability.
     pred_save_path = "./src/predictions/"
@@ -101,7 +101,7 @@ def find_params(X, y, X_test, feature_name):
     for idx in range(len(y_test_prob)):
         y_test[idx] = y_test_prob[idx][class_idx]
 
-    with open(pred_save_path + feature_name + '_svm_pred.csv', 'w') as out:
+    with open(pred_save_path + feature_name + '_grid_' + str(grid_size) + '_svm_pred.csv', 'w') as out:
         out.write("ID,Prediction\n")
         for i in range(1, len(y_test) + 1):
             out.write(str(i) + "," + str(y_test[i - 1]) + "\n")

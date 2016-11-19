@@ -6,12 +6,12 @@ import pickle
 import os
 from sklearn.model_selection import cross_val_score
 
-def find_params(X, y, X_test, feature_name):
+def find_params(X, y, X_test, feature_name, grid_size):
     # Parameters to try.
     max_features = [None, "auto", "log2"]
     min_split = [2**x / 100.0 for x in range (0, 7)]
 
-    param_grid = {"n_estimators": [15],
+    param_grid = {"n_estimators": [20],
                   "max_features": max_features,
                   "min_samples_split": min_split}
 
@@ -77,7 +77,7 @@ def find_params(X, y, X_test, feature_name):
     if not os.path.exists(est_save_path):
         os.makedirs(est_save_path)
 
-    pickle.dump(one_standard, open(est_save_path + feature_name + '_rf.pkl', 'wb'))
+    pickle.dump(one_standard, open(est_save_path + feature_name + '_grid_' + str(grid_size) + '_rf.pkl', 'wb'))
 
     # Output predictions as a probability.
     pred_save_path = "./src/predictions/"
@@ -96,7 +96,7 @@ def find_params(X, y, X_test, feature_name):
     for idx in range(len(y_test_prob)):
         y_test[idx] = y_test_prob[idx][class_idx]
 
-    with open(pred_save_path + feature_name + '_rf_pred.csv', 'w') as out:
+    with open(pred_save_path + feature_name + '_grid_' + str(grid_size) + '_rf_pred.csv', 'w') as out:
         out.write("ID,Prediction\n")
         for i in range(1, len(y_test) + 1):
             out.write(str(i) + "," + str(y_test[i - 1]) + "\n")
