@@ -38,3 +38,6 @@ def average_predictions(cross_val_errors, filenames, num_test_examples=138):
                 print("ERROR: PREDICTED AN INVALID CLASS")
                 out.write("ERROR: PREDICTED AN INVALID CLASS" + "\n")
                 break
+
+    print("Errors: " + str(cross_val_errors))
+    print("Files: " + str(filenames))
