@@ -21,8 +21,6 @@ class VoxelGrid:
                                                       y=targets, **params)
                     if (x == 0 and y == 0 and z == 0):
                         self.grid = np.zeros((size, size, size, feature_vector.shape[0]))
-                    print(self.grid.shape)
-                    print(feature_vector.shape)
                     self.grid[x, y, z] = feature_vector
 
     def get_feature_vector(self, x, y, z):

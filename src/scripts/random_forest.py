@@ -17,7 +17,7 @@ def find_params(X, y, X_test, feature_name, grid_size):
 
     dt = RandomForestClassifier()
 
-    grid_search = GridSearchCV(dt, param_grid=param_grid, cv=10, scoring='neg_log_loss', verbose=2, n_jobs=-1)
+    grid_search = GridSearchCV(dt, param_grid=param_grid, cv=10, scoring='neg_log_loss', verbose=1, n_jobs=-1)
     grid_search.fit(X, y)
 
     means = grid_search.cv_results_['mean_test_score']
