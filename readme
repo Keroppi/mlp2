@@ -13,23 +13,33 @@
 # with no strict formatting but make sure it has a reasonable minimum
 # length.
 
-author1@subdomain.ethz.ch
-author2@subdomain.ethz.ch
-author3@subdomain.ethz.ch
+vli@student.ethz.ch
+covictor@student.ethz.ch
+xliao@student.ethz.ch
 
 Preprocessing
-key1,key2,key3
+crop,grid
 
 Features
-key1,key2,key3
+fourier,canny,histogram
 
 Model
-key1,key2,key3
+randomforest,svm,logisticregression
 
 Description
-Verbose and detailed description of preprocessing, features, model and
-other things that are helpful to understand what was done exactly.
-E.g. if key1 = histogram for features, then the description might look
-like this: "We divide the image into 7x7x7 blocks and make a histogram
-with 10 bins for each of them. These histograms are then concatenated
-into a vector"
+We first crop the borders from the brain. Then we break the brain into
+1x1x1, 3x3x3, and 5x5x5 grids.
+
+We compute features for each voxel using 45-60 bin histogram, fourier
+transform, and canny filter on all 3 axes. Then we reduce
+dimensionality using a combination of PCA, ANOVA, and truncated SVD.
+
+For each feature, we train using cross-validation with SVM,
+logistic regression, and random forest. We use a 1-standard rule
+to pick the best estimator, where we pick the estimator with
+lowest standard deviation that is still within 1 standard
+deviation from the estimator with lowest error.
+
+Finally, we average all predictions using the sum of the cross-
+validation error and standard deviation. We take the exponential
+of the errors before weighting since they are log errors.
