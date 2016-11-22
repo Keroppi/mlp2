@@ -1,7 +1,7 @@
 import sys
 
 # Whether or not this code will run on the cluster.
-cluster_run = False
+cluster_run = True
 cluster_username = 'vli'
 
 # This is to point to local packages on Euler cluster.
@@ -58,7 +58,7 @@ crop_size_str = str(x_crop) + "_" + str(y_crop) + "_" + str(z_crop) # for name o
 train_filenames, test_filenames = crop.crop_images(train_filenames, test_filenames, x_crop, y_crop, z_crop, cluster_run, cluster_username)
 
 # Break the brain into a voxel grid and compute features.
-for grid_size in (1, 3, 5):
+for grid_size in (1, 3):
     ###############
 
     ### Fourier ###
