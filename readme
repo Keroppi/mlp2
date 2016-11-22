@@ -28,7 +28,7 @@ randomforest,svm,logisticregression
 
 Description
 We first crop the borders from the brain. Then we break the brain into
-1x1x1, 3x3x3, and 5x5x5 grids.
+1x1x1 and 3x3x3 grids.
 
 We compute features for each voxel using 45-60 bin histogram, fourier
 transform, and canny filter on all 3 axes. Then we reduce
