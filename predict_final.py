@@ -15,6 +15,11 @@ import os
 import nibabel
 from nilearn import image
 import pickle
+from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+
+from   src.scripts.model import Model
 import src.scripts.get_targets as targets
 import src.scripts.fourier as fourier
 import src.scripts.svm as svm
@@ -51,133 +56,222 @@ prediction_files = [] # store the paths to the prediction files (needed for aver
 
 # Crop the images (automatically crops the black borders, offsets are starting from the actual brain).
 
-x_crop = 2
-y_crop = 2
-z_crop = 2
-crop_size_str = str(x_crop) + "_" + str(y_crop) + "_" + str(z_crop) # for name of directory to save to
-train_filenames, test_filenames = crop.crop_images(train_filenames, test_filenames, x_crop, y_crop, z_crop, cluster_run, cluster_username)
+# Crop for hippocampus area.
+x_min = 30 # pixels to crop from the left ear
+x_max = 99 # pixels to crop from the right ear
+y_min = 55
+y_max = 75
+z_min = 44
+z_max = 93
+crop_str = str(x_min) + "," + str(x_max) + "_" + str(y_min) + "," + str(y_max) + "_" + str(z_min) + "," + str(z_max) # for name of directory or files to save
+train_filenames, test_filenames = crop.crop_images(train_filenames, test_filenames, x_min, x_max, y_min, y_max, z_min, z_max, cluster_run, cluster_username)
 
 # Break the brain into a voxel grid and compute features.
-for grid_size in (1, 3):
+for grid_size in (1,):
     ###############
 
     ### Fourier ###
 
     params = {}
 
-    pca_param = 7
-    kbest_param = 7
+    pca_param = 4
+    kbest_param = 4
 
     if grid_size > 1:
         pca_param = 2
         kbest_param = 2
 
     feature_function = fourier.fourier
-    fourier_train_feat, fourier_test_feat = feat.compute_grid_features(train_filenames, test_filenames, y, grid_size, 'fourier', feature_function, params, crop_size_str, cluster_run, cluster_username, pca_dim = pca_param, k_best = kbest_param)
+    fourier_train_feat, fourier_test_feat = feat.compute_grid_features(train_filenames, test_filenames, y, grid_size, crop_str, 'fourier', feature_function, params, cluster_run, cluster_username, pca_dim = pca_param, k_best = kbest_param)
 
     ###############
 
     ### Histogram ###
 
-    kbest_param = 10
+    kbest_param = 5
 
     if grid_size > 1:
         kbest_param = 3
 
     feature_function = hist.histogram
     params = {'num_bins': 50}
-    hist_train_feat, hist_test_feat = feat.compute_grid_features(train_filenames, test_filenames, y, grid_size, 'hist', feature_function, params, crop_size_str, cluster_run, cluster_username, k_best = kbest_param)
+    hist_train_feat, hist_test_feat = feat.compute_grid_features(train_filenames, test_filenames, y, grid_size, crop_str, 'hist', feature_function, params, cluster_run, cluster_username, k_best = kbest_param)
 
     ###############
 
     ### Canny Filter ###
 
-    n_dim_param = 400
-    params = {'slices': 5}
+    n_dim_param = 100
+    params = {'slices': 1}
 
     if grid_size > 1:
         n_dim_param = 100
         params = {'slices': 1}
 
-    if grid_size > 3:
-        n_dim_param = 25
-
     feature_function = canny.canny_filter
-    canny_train_feat, canny_test_feat = feat.compute_grid_features(train_filenames, test_filenames, y, grid_size, 'canny', feature_function, params, crop_size_str, cluster_run, cluster_username, n_dim = n_dim_param)
+    canny_train_feat, canny_test_feat = feat.compute_grid_features(train_filenames, test_filenames, y, grid_size, crop_str, 'canny', feature_function, params, cluster_run, cluster_username, n_dim = n_dim_param)
 
     ###############
 
     # Find hyperparameters for various models and output prediction.
 
-    ### SVM ###
+    ##### SVM #####
 
-    # SVM with fourier features
-    f_svm_cross_val_error, f_svm_stddev = svm.find_params(fourier_train_feat, y, fourier_test_feat, 'fourier', grid_size)
+    ### SVM with fourier features ###
+    # Parameters to try.
+    param_grid = {"probability": [True],
+                  "C": [0.2 * x for x in range(1, 50)],
+                  "degree": [3],
+                  "kernel": ['poly', 'linear', 'rbf', 'sigmoid'],
+                  "tol": [0.01 * x for x in range(1, 10)]}
 
+    svm_model = Model(SVC, param_grid, 'fourier', grid_size, crop_str)
+
+    # Grid search all hyperparameters.
+    f_svm_cross_val_error, f_svm_stddev = svm_model.find_hyperparams(fourier_train_feat, y)
+
+    # Predict.
+    prediction_file_path = svm_model.output_predictions(fourier_test_feat)
+
+    # Add to the final weighting if the error + stddev is good enough.
     if f_svm_cross_val_error + f_svm_stddev < MAX_ERR_PLUS_STDDEV:
-        errors.append(f_svm_cross_val_error + f_svm_stddev) # weight according to error + stddev to punish high stddev
-        prediction_files.append('./src/predictions/fourier_grid_' + str(grid_size) + '_svm_pred.csv')
+        errors.append(f_svm_cross_val_error + f_svm_stddev)
+        prediction_files.append(prediction_file_path)
 
-    # SVM with histogram features
-    h_svm_cross_val_error, h_svm_stddev = svm.find_params(hist_train_feat, y, hist_test_feat, 'hist', grid_size)
+    ### SVM with histogram features ###
+    svm_model = Model(SVC, param_grid, 'hist', grid_size, crop_str)
 
+    # Grid search all hyperparameters.
+    h_svm_cross_val_error, h_svm_stddev = svm_model.find_hyperparams(hist_train_feat, y)
+
+    # Predict.
+    prediction_file_path = svm_model.output_predictions(hist_test_feat)
+
+    # Add to the final weighting if the error + stddev is good enough.
     if h_svm_cross_val_error + h_svm_stddev < MAX_ERR_PLUS_STDDEV:
         errors.append(h_svm_cross_val_error + h_svm_stddev)
-        prediction_files.append('./src/predictions/hist_grid_' + str(grid_size) + '_svm_pred.csv')
+        prediction_files.append(prediction_file_path)
 
-    # SVM with canny filter features
-    c_svm_cross_val_error, c_svm_stddev = svm.find_params(canny_train_feat, y, canny_test_feat, 'canny', grid_size)
+    ### SVM with canny filter features ###
+    svm_model = Model(SVC, param_grid, 'canny', grid_size, crop_str)
 
+    # Grid search all hyperparameters.
+    c_svm_cross_val_error, c_svm_stddev = svm_model.find_hyperparams(canny_train_feat, y)
+
+    # Predict.
+    prediction_file_path = svm_model.output_predictions(canny_test_feat)
+
+    # Add to the final weighting if the error + stddev is good enough.
     if c_svm_cross_val_error + c_svm_stddev < MAX_ERR_PLUS_STDDEV:
         errors.append(c_svm_cross_val_error + c_svm_stddev)
-        prediction_files.append('./src/predictions/canny_grid_' + str(grid_size) + '_svm_pred.csv')
+        prediction_files.append(prediction_file_path)
 
     ###############
 
-    ### Logistic Regression ###
+    ##### Logistic Regression #####
 
-    # with fourier features
-    f_logreg_cross_val_error, f_logreg_stddev = logreg.find_params(fourier_train_feat, y, fourier_test_feat, 'fourier', grid_size)
+    ### Logistic Regression with Fourier features ###
+    # Parameters to try.
+    param_grid = {"penalty": ['l1', 'l2'],
+                  "C": [0.001, 0.005, 0.01, 0.05] + [0.1 * x for x in range(1, 50)],
+                  "max_iter": [300],
+                  "solver": ['liblinear'],
+                  "tol": [0.001, 0.0025, 0.005, 0.01, 0.02, 0.03, 0.04, 0.05]
+                 }
 
+    lr_model = Model(LogisticRegression, param_grid, 'fourier', grid_size, crop_str)
+
+    # Grid search all hyperparameters.
+    f_logreg_cross_val_error, f_logreg_stddev = lr_model.find_hyperparams(fourier_train_feat, y)
+
+    # Predict.
+    prediction_file_path = lr_model.output_predictions(fourier_test_feat)
+
+    # Add to the final weighting if the error + stddev is good enough.
     if f_logreg_cross_val_error + f_logreg_stddev < MAX_ERR_PLUS_STDDEV:
         errors.append(f_logreg_cross_val_error + f_logreg_stddev)
-        prediction_files.append('./src/predictions/fourier_grid_' + str(grid_size) + '_logreg_pred.csv')
+        prediction_files.append(prediction_file_path)
 
-    # with histogram features
-    h_logreg_cross_val_error, h_logreg_stddev = logreg.find_params(hist_train_feat, y, hist_test_feat, 'hist', grid_size)
+    ### Logistic Regression with histogram features ###
+    lr_model = Model(LogisticRegression, param_grid, 'hist', grid_size, crop_str)
 
+    # Grid search all hyperparameters.
+    h_logreg_cross_val_error, h_logreg_stddev = lr_model.find_hyperparams(hist_train_feat, y)
+
+    # Predict.
+    prediction_file_path = lr_model.output_predictions(hist_test_feat)
+
+    # Add to the final weighting if the error + stddev is good enough.
     if h_logreg_cross_val_error + h_logreg_stddev < MAX_ERR_PLUS_STDDEV:
         errors.append(h_logreg_cross_val_error + h_logreg_stddev)
-        prediction_files.append('./src/predictions/hist_grid_' + str(grid_size) + '_logreg_pred.csv')
+        prediction_files.append(prediction_file_path)
 
-    # with canny filter features
-    c_logreg_cross_val_error, c_logreg_stddev = logreg.find_params(canny_train_feat, y, canny_test_feat, 'canny', grid_size)
+    ### Logistic Regression with canny filter features ###
+    lr_model = Model(LogisticRegression, param_grid, 'canny', grid_size, crop_str)
 
+    # Grid search all hyperparameters.
+    c_logreg_cross_val_error, c_logreg_stddev = lr_model.find_hyperparams(canny_train_feat, y)
+
+    # Predict.
+    prediction_file_path = lr_model.output_predictions(canny_test_feat)
+
+    # Add to the final weighting if the error + stddev is good enough.
     if c_logreg_cross_val_error + c_logreg_stddev < MAX_ERR_PLUS_STDDEV:
         errors.append(c_logreg_cross_val_error + c_logreg_stddev)
-        prediction_files.append('./src/predictions/canny_grid_' + str(grid_size) + '_logreg_pred.csv')
+        prediction_files.append(prediction_file_path)
 
     ###############
 
-    ###  Random Forest Classifier ###
+    #####  Random Forest Classifier #####
 
-    f_dt_cross_val_error, f_dt_stddev = rf.find_params(fourier_train_feat, y, fourier_test_feat, 'fourier', grid_size)
+    ### Random Forest with Fourier features ###
+    # Parameters to try.
+    param_grid = {"n_estimators": [20],
+                  "max_features": [None, "auto", "log2"],
+                  "min_samples_split": [2**x / 100.0 for x in range (0, 7)]}
 
+    rf_model = Model(RandomForestClassifier, param_grid, 'fourier', grid_size, crop_str)
+
+    # Grid search all hyperparameters.
+    f_dt_cross_val_error, f_dt_stddev = rf_model.find_hyperparams(fourier_train_feat, y)
+
+    # Predict.
+    prediction_file_path = rf_model.output_predictions(fourier_test_feat)
+
+    # Add to the final weighting if the error + stddev is good enough.
     if f_dt_cross_val_error + f_dt_stddev < MAX_ERR_PLUS_STDDEV:
         errors.append(f_dt_cross_val_error + f_dt_stddev)
-        prediction_files.append('./src/predictions/fourier_grid_' + str(grid_size) + '_rf_pred.csv')
+        prediction_files.append(prediction_file_path)
 
-    h_dt_cross_val_error, h_dt_stddev = rf.find_params(hist_train_feat, y, hist_test_feat, 'hist', grid_size)
+    ### Random Forest with histogram features ###
 
+    rf_model = Model(RandomForestClassifier, param_grid, 'hist', grid_size, crop_str)
+
+    # Grid search all hyperparameters.
+    h_dt_cross_val_error, h_dt_stddev = rf_model.find_hyperparams(hist_train_feat, y)
+
+    # Predict.
+    prediction_file_path = rf_model.output_predictions(hist_test_feat)
+
+    # Add to the final weighting if the error + stddev is good enough.
     if h_dt_cross_val_error + h_dt_stddev < MAX_ERR_PLUS_STDDEV:
         errors.append(h_dt_cross_val_error + h_dt_stddev)
-        prediction_files.append('./src/predictions/hist_grid_' + str(grid_size) + '_rf_pred.csv')
+        prediction_files.append(prediction_file_path)
 
-    c_dt_cross_val_error, c_dt_stddev = rf.find_params(canny_train_feat, y, canny_test_feat, 'canny', grid_size)
+    ### Random Forest with canny filter features ###
 
+    rf_model = Model(RandomForestClassifier, param_grid, 'canny', grid_size, crop_str)
+
+    # Grid search all hyperparameters.
+    c_dt_cross_val_error, c_dt_stddev = rf_model.find_hyperparams(canny_train_feat, y)
+
+    # Predict.
+    prediction_file_path = rf_model.output_predictions(canny_test_feat)
+
+    # Add to the final weighting if the error + stddev is good enough.
     if c_dt_cross_val_error + c_dt_stddev < MAX_ERR_PLUS_STDDEV:
         errors.append(c_dt_cross_val_error + c_dt_stddev)
-        prediction_files.append('./src/predictions/canny_grid_' + str(grid_size) + '_rf_pred.csv')
+        prediction_files.append(prediction_file_path)
 
     ###############
 

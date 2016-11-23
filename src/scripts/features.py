@@ -40,7 +40,7 @@ def reduce_dimensions(feature_name, X, targets, X_test, pca_dim = 3, k_best = 3,
     return (reduced_X, reduced_X_test)
 
 
-def compute_grid_features(train_filenames, test_filenames, targets, grid_size, feature_name, feature_function, params, crop_size_str, cluster_run, cluster_username='vli', pca_dim=3, k_best=3, n_dim=100):
+def compute_grid_features(train_filenames, test_filenames, targets, grid_size, crop_size_str, feature_name, feature_function, params, cluster_run, cluster_username='vli', pca_dim=3, k_best=3, n_dim=100):
     # Train features
     train_grids = []
 
