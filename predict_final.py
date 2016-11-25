@@ -1,7 +1,7 @@
 import sys
 
 # Whether or not this code will run on the cluster.
-cluster_run = True
+cluster_run = False
 cluster_username = 'vli'
 
 # This is to point to local packages on Euler cluster.
@@ -66,7 +66,7 @@ crop_str = str(x_min) + "," + str(x_max) + "_" + str(y_min) + "," + str(y_max) +
 train_filenames, test_filenames = crop.crop_images(train_filenames, test_filenames, x_min, x_max, y_min, y_max, z_min, z_max, cluster_run, cluster_username)
 
 # Break the brain into a voxel grid and compute features.
-for grid_size in (1,):
+for grid_size in (1, 3):
     ###############
 
     ### Fourier ###
@@ -121,7 +121,7 @@ for grid_size in (1,):
 
     ### Histogram of Oriented Gradients ###
 
-    kbest_param = 10
+    kbest_param = 20
     params = {'slices': 5}
 
     if grid_size > 1:
@@ -142,7 +142,7 @@ for grid_size in (1,):
     ### SVM with fourier features ###
     # Parameters to try.
     param_grid = {"probability": [True],
-                  "C": [0.01, 0.1, 1, 10],
+                  "C": [0.01, 0.1, 0.5, 1, 5, 10],
                   "degree": [3],
                   "kernel": ['poly', 'linear', 'rbf', 'sigmoid'],
                   "tol": [0.001, 0.01, 0.1]}
@@ -212,7 +212,7 @@ for grid_size in (1,):
                   "C": [0.001, 0.005, 0.01, 0.05] + [0.1 * x for x in range(1, 50)],
                   "max_iter": [300],
                   "solver": ['liblinear'],
-                  "tol": [0.001, 0.0025, 0.005, 0.01, 0.02, 0.03, 0.04, 0.05]
+                  "tol": [0.001, 0.0025, 0.005] + [0.01 * x for x in range(1, 20)]
                  }
 
     lr_model = Model(LogisticRegression, param_grid, 'fourier', grid_size, crop_str)
