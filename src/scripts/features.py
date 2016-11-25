@@ -41,13 +41,15 @@ def reduce_dimensions(feature_name, X, targets, X_test, pca_dim = 3, k_best = 3,
 
 
 def compute_grid_features(train_filenames, test_filenames, targets, grid_size, crop_size_str, feature_name, feature_function, params, cluster_run, cluster_username='vli', pca_dim=3, k_best=3, n_dim=100):
+    param_str = str(params.keys()) + str(params.values())
+
     # Train features
     train_grids = []
 
     if cluster_run:
-        save_path = "/cluster/scratch/" + cluster_username + "/src/train_features/" + feature_name + "/crop_" + crop_size_str + "/grid_" + str(grid_size) + "/"
+        save_path = "/cluster/scratch/" + cluster_username + "/src/train_features/" + feature_name + "/crop_" + crop_size_str + "/grid_" + str(grid_size) + "/param_" + param_str
     else:
-        save_path = "./src/train_features/" + feature_name + "/crop_" + crop_size_str + "/grid_" + str(grid_size) + "/"
+        save_path = "./src/train_features/" + feature_name + "/crop_" + crop_size_str + "/grid_" + str(grid_size) + "/param_" + param_str
     if not os.path.exists(save_path):
         os.makedirs(save_path)
 
@@ -82,9 +84,9 @@ def compute_grid_features(train_filenames, test_filenames, targets, grid_size, c
     test_grids = []
 
     if cluster_run:
-        save_path = "/cluster/scratch/" + cluster_username + "/src/test_features/" + feature_name + "/crop_" + crop_size_str + "/grid_" + str(grid_size) + "/"
+        save_path = "/cluster/scratch/" + cluster_username + "/src/test_features/" + feature_name + "/crop_" + crop_size_str + "/grid_" + str(grid_size) + "/param_" + param_str
     else:
-        save_path = "./src/test_features/" + feature_name + "/crop_" + crop_size_str + "/grid_" + str(grid_size) + "/"
+        save_path = "./src/test_features/" + feature_name + "/crop_" + crop_size_str + "/grid_" + str(grid_size) + "/param_" + param_str
 
     if not os.path.exists(save_path):
         os.makedirs(save_path)
