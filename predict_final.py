@@ -56,13 +56,12 @@ prediction_files = [] # store the paths to the prediction files (needed for aver
 
 # Crop the images (automatically crops the black borders, offsets are starting from the actual brain).
 
-# Crop for hippocampus area.
-x_min = 30 # pixels to crop from the left ear
-x_max = 99 # pixels to crop from the right ear
-y_min = 55
-y_max = 75
-z_min = 44
-z_max = 93
+x_min = 2 # pixels to crop from the left ear
+x_max = 2 # pixels to crop from the right ear
+y_min = 2
+y_max = 2
+z_min = 2
+z_max = 2
 crop_str = str(x_min) + "," + str(x_max) + "_" + str(y_min) + "," + str(y_max) + "_" + str(z_min) + "," + str(z_max) # for name of directory or files to save
 train_filenames, test_filenames = crop.crop_images(train_filenames, test_filenames, x_min, x_max, y_min, y_max, z_min, z_max, cluster_run, cluster_username)
 
@@ -74,42 +73,65 @@ for grid_size in (1,):
 
     params = {}
 
-    pca_param = 4
-    kbest_param = 4
+    pca_param = 7
+    kbest_param = 7
 
     if grid_size > 1:
         pca_param = 2
         kbest_param = 2
 
     feature_function = fourier.fourier
-    fourier_train_feat, fourier_test_feat = feat.compute_grid_features(train_filenames, test_filenames, y, grid_size, crop_str, 'fourier', feature_function, params, cluster_run, cluster_username, pca_dim = pca_param, k_best = kbest_param)
+    fourier_train_feat, fourier_test_feat = feat.compute_grid_features(train_filenames, test_filenames, y, grid_size,
+                                                                       crop_str, 'fourier', feature_function, params,
+                                                                       cluster_run, cluster_username, pca_dim=pca_param,
+                                                                       k_best=kbest_param)
 
     ###############
 
     ### Histogram ###
 
-    kbest_param = 5
+    kbest_param = 10
 
     if grid_size > 1:
         kbest_param = 3
 
     feature_function = hist.histogram
     params = {'num_bins': 50}
-    hist_train_feat, hist_test_feat = feat.compute_grid_features(train_filenames, test_filenames, y, grid_size, crop_str, 'hist', feature_function, params, cluster_run, cluster_username, k_best = kbest_param)
+    hist_train_feat, hist_test_feat = feat.compute_grid_features(train_filenames, test_filenames, y, grid_size,
+                                                                 crop_str, 'hist', feature_function, params,
+                                                                 cluster_run, cluster_username, k_best=kbest_param)
 
     ###############
 
     ### Canny Filter ###
 
-    n_dim_param = 100
-    params = {'slices': 1}
+    n_dim_param = 400
+    params = {'slices': 5}
 
     if grid_size > 1:
         n_dim_param = 100
         params = {'slices': 1}
 
     feature_function = canny.canny_filter
-    canny_train_feat, canny_test_feat = feat.compute_grid_features(train_filenames, test_filenames, y, grid_size, crop_str, 'canny', feature_function, params, cluster_run, cluster_username, n_dim = n_dim_param)
+    canny_train_feat, canny_test_feat = feat.compute_grid_features(train_filenames, test_filenames, y, grid_size,
+                                                                   crop_str, 'canny', feature_function, params,
+                                                                   cluster_run, cluster_username, n_dim=n_dim_param)
+
+    ###############
+
+    ### Histogram of Oriented Gradients ###
+
+    kbest_param = 10
+    params = {'slices': 5}
+
+    if grid_size > 1:
+        kbest_param = 3
+        params = {'slices': 1}
+
+    feature_function = canny.canny_filter
+    hog_train_feat, hog_test_feat = feat.compute_grid_features(train_filenames, test_filenames, y, grid_size,
+                                                               crop_str, 'hog', feature_function, params,
+                                                               cluster_run, cluster_username, k_best=kbest_param)
 
     ###############
 
@@ -120,10 +142,10 @@ for grid_size in (1,):
     ### SVM with fourier features ###
     # Parameters to try.
     param_grid = {"probability": [True],
-                  "C": [0.2 * x for x in range(1, 50)],
+                  "C": [0.01, 0.1, 1, 10],
                   "degree": [3],
                   "kernel": ['poly', 'linear', 'rbf', 'sigmoid'],
-                  "tol": [0.01 * x for x in range(1, 10)]}
+                  "tol": [0.001, 0.01, 0.1]}
 
     svm_model = Model(SVC, param_grid, 'fourier', grid_size, crop_str)
 
@@ -164,6 +186,20 @@ for grid_size in (1,):
     # Add to the final weighting if the error + stddev is good enough.
     if c_svm_cross_val_error + c_svm_stddev < MAX_ERR_PLUS_STDDEV:
         errors.append(c_svm_cross_val_error + c_svm_stddev)
+        prediction_files.append(prediction_file_path)
+
+    ### SVM with histogram of oriented gradient features ###
+    svm_model = Model(SVC, param_grid, 'hog', grid_size, crop_str)
+
+    # Grid search all hyperparameters.
+    hog_svm_cross_val_error, hog_svm_stddev = svm_model.find_hyperparams(hog_train_feat, y)
+
+    # Predict.
+    prediction_file_path = svm_model.output_predictions(hog_test_feat)
+
+    # Add to the final weighting if the error + stddev is good enough.
+    if hog_svm_cross_val_error + hog_svm_stddev < MAX_ERR_PLUS_STDDEV:
+        errors.append(hog_svm_cross_val_error + hog_svm_stddev)
         prediction_files.append(prediction_file_path)
 
     ###############
@@ -220,6 +256,20 @@ for grid_size in (1,):
         errors.append(c_logreg_cross_val_error + c_logreg_stddev)
         prediction_files.append(prediction_file_path)
 
+    ### Logistic Regression with histogram of oriented gradient features ###
+    lr_model = Model(LogisticRegression, param_grid, 'hog', grid_size, crop_str)
+
+    # Grid search all hyperparameters.
+    hog_logreg_cross_val_error, hog_logreg_stddev = lr_model.find_hyperparams(hog_train_feat, y)
+
+    # Predict.
+    prediction_file_path = lr_model.output_predictions(hog_test_feat)
+
+    # Add to the final weighting if the error + stddev is good enough.
+    if hog_logreg_cross_val_error + hog_logreg_stddev < MAX_ERR_PLUS_STDDEV:
+        errors.append(hog_logreg_cross_val_error + hog_logreg_stddev)
+        prediction_files.append(prediction_file_path)
+
     ###############
 
     #####  Random Forest Classifier #####
@@ -271,6 +321,21 @@ for grid_size in (1,):
     # Add to the final weighting if the error + stddev is good enough.
     if c_dt_cross_val_error + c_dt_stddev < MAX_ERR_PLUS_STDDEV:
         errors.append(c_dt_cross_val_error + c_dt_stddev)
+        prediction_files.append(prediction_file_path)
+
+    ### Random Forest with histogram of oriented gradient features ###
+
+    rf_model = Model(RandomForestClassifier, param_grid, 'hog', grid_size, crop_str)
+
+    # Grid search all hyperparameters.
+    hog_dt_cross_val_error, hog_dt_stddev = rf_model.find_hyperparams(hog_train_feat, y)
+
+    # Predict.
+    prediction_file_path = rf_model.output_predictions(hog_test_feat)
+
+    # Add to the final weighting if the error + stddev is good enough.
+    if hog_dt_cross_val_error + hog_dt_stddev < MAX_ERR_PLUS_STDDEV:
+        errors.append(hog_dt_cross_val_error + hog_dt_stddev)
         prediction_files.append(prediction_file_path)
 
     ###############
