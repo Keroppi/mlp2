@@ -24,7 +24,7 @@ def reduce_dimensions(feature_name, X, targets, X_test, pca_dim = 3, k_best = 3,
         combined_features.fit(X_scaled, targets)
         reduced_X = combined_features.transform(X_scaled)
         reduced_X_test = combined_features.transform(X_test_scaled)
-    elif feature_name == 'hist':
+    elif feature_name == 'hist' or feature_name == 'hog':
         selection = SelectKBest(k=k_best)
         selection.fit(X, targets)
         reduced_X = selection.transform(X)

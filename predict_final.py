@@ -38,7 +38,7 @@ if cluster_run:
     warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
 
 # Threshold for rejecting a model (error + stddev has to be lower than this).
-MAX_ERR_PLUS_STDDEV = 0.45
+MAX_ERR_PLUS_STDDEV = 0.41
 
 # Get the data.
 NUM_TRAIN_DATA = 278
